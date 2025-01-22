@@ -1,1 +1,2 @@
-# Convey - A simple and lightweight terminal-based HTTP Client
+# Convey
+A simple and lightweight terminal-based HTTP Client
