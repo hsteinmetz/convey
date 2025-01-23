@@ -13,6 +13,8 @@ use ratatui::{
 
 mod app;
 mod data;
+mod http;
+mod json;
 mod ui;
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<bool> {

@@ -4,7 +4,7 @@ use reqwest::Method;
 
 use serde::{Deserialize, Serialize};
 
-use crate::data::http_method_serde;
+use crate::json::http_method::http_method;
 
 pub enum CurrentView {
     Overview,
@@ -17,11 +17,12 @@ pub enum EditingState {
     Body,
     HeaderKey,
     HeaderValue,
+    Nothing,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct RequestData {
-    #[serde(with = "http_method_serde")]
+    #[serde(with = "http_method")]
     pub method: Method,
     pub url: String,
 }
@@ -39,6 +40,7 @@ pub struct App {
     pub requestCollections: HashMap<String, Vec<RequestData>>,
     pub currentRequest: Option<RequestData>,
     pub currentView: CurrentView,
+    pub editingState: EditingState,
 }
 
 impl App {
@@ -47,6 +49,7 @@ impl App {
             requestCollections: HashMap::new(),
             currentRequest: None,
             currentView: CurrentView::Overview,
+            editingState: EditingState::Nothing,
         }
     }
 }
