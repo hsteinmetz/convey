@@ -1,16 +1,19 @@
 use std::collections::HashMap;
 
+use ratatui::widgets::ListState;
 use reqwest::Method;
 
 use serde::{Deserialize, Serialize};
+use tui_tree_widget::TreeState;
 
 use crate::json::http_method::http_method;
 
-pub enum CurrentView {
-    Overview,
-    SplitView,
+pub enum FocusedSection {
+    Left,
+    Right,
 }
 
+#[derive(Debug)]
 pub enum EditingState {
     Url,
     Name,
@@ -37,19 +40,21 @@ impl RequestData {
 }
 
 pub struct App {
-    pub requestCollections: HashMap<String, Vec<RequestData>>,
-    pub currentRequest: Option<RequestData>,
-    pub currentView: CurrentView,
-    pub editingState: EditingState,
+    pub request_collections: HashMap<String, Vec<RequestData>>,
+    pub current_request: Option<RequestData>,
+    pub editing_state: EditingState,
+    pub focused_section: FocusedSection,
+    pub request_tree_state: TreeState<usize>,
 }
 
 impl App {
     pub fn new() -> App {
         App {
-            requestCollections: HashMap::new(),
-            currentRequest: None,
-            currentView: CurrentView::Overview,
-            editingState: EditingState::Nothing,
+            request_collections: HashMap::new(),
+            current_request: None,
+            editing_state: EditingState::Nothing,
+            focused_section: FocusedSection::Left,
+            request_tree_state: TreeState::default(),
         }
     }
 }

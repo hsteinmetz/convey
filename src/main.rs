@@ -3,13 +3,14 @@ use std::{error::Error, io};
 use app::App;
 use ratatui::{
     crossterm::{
-        event::{DisableMouseCapture, EnableMouseCapture},
+        event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
         execute,
         terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     },
     prelude::{Backend, CrosstermBackend},
     Terminal,
 };
+use ui::overview::{handle_key, render};
 
 mod app;
 mod data;
@@ -18,7 +19,21 @@ mod json;
 mod ui;
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<bool> {
-    todo!()
+    loop {
+        terminal.draw(|f| render(f, app));
+
+        if let Event::Key(key) = event::read()? {
+            if key.kind == event::KeyEventKind::Release {
+                continue;
+            }
+
+            if key.code == KeyCode::Char('q') {
+                return Ok(true);
+            }
+
+            handle_key(key, app);
+        }
+    }
 }
 
 #[tokio::main]
