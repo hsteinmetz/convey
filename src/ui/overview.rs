@@ -1,15 +1,13 @@
-use std::collections::HashMap;
-
 use ratatui::{
     crossterm::event::{KeyCode, KeyEvent},
     layout::{Constraint, Direction, Layout, Rect},
     style::{Style, Stylize},
-    widgets::{Block, Borders, List, ListDirection, ListState, Paragraph},
+    widgets::Block,
     Frame,
 };
-use tui_tree_widget::{Tree, TreeItem, TreeState};
+use tui_tree_widget::{Tree, TreeItem};
 
-use crate::app::{App, RequestData};
+use crate::app::{App, RequestCollection};
 
 use super::root_layout::create_root_layout;
 
@@ -28,20 +26,14 @@ pub fn render(frame: &mut Frame, state: &mut App) {
 }
 
 fn render_list(frame: &mut Frame, area: &Rect, app_state: &mut App) {
-    let mut collections = HashMap::new();
-    collections.insert(
-        String::from("Collection 1"),
-        vec![RequestData::new(), RequestData::new()],
-    );
-    collections.insert(
-        String::from("Collection 2"),
-        vec![RequestData::new(), RequestData::new()],
-    );
-    app_state.request_collections = collections;
     let items = construct_tree(&app_state.request_collections);
     let list = Tree::new(&items)
         .expect("all identifiers are unique")
-        .block(Block::bordered().title("Requests"))
+        .block(
+            Block::bordered()
+                .title("Requests")
+                .title_bottom(" (k) up (j) down (enter) select "),
+        )
         .highlight_style(Style::new().italic())
         .highlight_symbol(">>");
 
@@ -49,7 +41,7 @@ fn render_list(frame: &mut Frame, area: &Rect, app_state: &mut App) {
 }
 
 pub fn handle_key(key: KeyEvent, state: &mut App) {
-    match &state.focused_section {
+    match state.focused_section {
         crate::app::FocusedSection::Left => match key.code {
             KeyCode::Char('j') => {
                 state.request_tree_state.select_relative(|current| {
@@ -62,11 +54,18 @@ pub fn handle_key(key: KeyEvent, state: &mut App) {
                 });
             }
             KeyCode::Enter => {
-                let selected_identifier = state.request_tree_state.selected();
+                if state.get_tree_state().selected().len() == 0 {
+                    return;
+                }
 
-                state
-                    .request_tree_state
-                    .toggle(selected_identifier.to_vec());
+                let selected_id = state.get_tree_state().selected()[0].clone();
+
+                if state.find_request(&selected_id).is_some() {
+                    state.select_request(&selected_id);
+                    state.get_tree_state().select(vec![selected_id]);
+                } else if state.find_collection(&selected_id).is_some() {
+                    state.get_tree_state().toggle(vec![selected_id]);
+                }
             }
             _ => {}
         },
@@ -74,20 +73,17 @@ pub fn handle_key(key: KeyEvent, state: &mut App) {
     }
 }
 
-fn construct_tree(map: &HashMap<String, Vec<RequestData>>) -> Vec<TreeItem<'_, usize>> {
+fn construct_tree(collections: &Vec<RequestCollection>) -> Vec<TreeItem<'_, String>> {
     let mut items = Vec::new();
-    let mut counter = 1;
 
-    for key in map.keys() {
+    for collection in collections {
         let mut children = Vec::new();
-        if let Some(list) = map.get(key) {
-            for req in list {
-                children.push(TreeItem::new_leaf(counter, req.url.clone()));
-                counter += 1;
-            }
+        for req in &collection.requests {
+            children.push(TreeItem::new_leaf(req.id.clone(), req.url.clone()));
         }
-        counter += 1;
-        items.push(TreeItem::new(counter, key.clone(), children).expect("error"));
+        items.push(
+            TreeItem::new(collection.id.clone(), collection.name.clone(), children).expect("error"),
+        );
     }
 
     items
