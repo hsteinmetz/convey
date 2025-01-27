@@ -20,7 +20,7 @@ pub enum EditingState {
     Nothing,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RequestData {
     pub id: String,
     #[serde(with = "http_method")]
@@ -89,19 +89,19 @@ impl App {
         uuid::Uuid::new_v4().to_string()
     }
 
-    pub fn find_request(&self, id: &str) -> Option<&RequestData> {
+    pub fn find_request(&self, id: &String) -> Option<&RequestData> {
         self.request_collections
             .iter()
             .flat_map(|col| &col.requests)
-            .find(|req| req.id == id)
+            .find(|req| req.id.eq(id))
     }
 
-    pub fn find_collection(&self, id: &str) -> Option<&RequestCollection> {
-        self.request_collections.iter().find(|c| c.id == *id)
+    pub fn find_collection(&self, id: &String) -> Option<&RequestCollection> {
+        self.request_collections.iter().find(|c| c.id.eq(id))
     }
 
     pub fn select_request(&mut self, id: &str) {
-        if self.find_request(id).is_some() {
+        if self.find_request(&id.to_string()).is_some() {
             self.current_request = Some(id.to_string());
         } else {
             self.current_request = None;
@@ -111,6 +111,6 @@ impl App {
     pub fn get_current_request(&self) -> Option<&RequestData> {
         self.current_request
             .as_deref()
-            .and_then(|id| self.find_request(id))
+            .and_then(|id| self.find_request(&id.to_string()))
     }
 }

@@ -19,10 +19,8 @@ pub fn render(frame: &mut Frame, state: &mut App) {
         .constraints([Constraint::Min(10), Constraint::Percentage(80)])
         .split(root_layout[1]);
 
-    let right = Block::bordered().style(Style::default());
-
     render_list(frame, &sections[0], state);
-    frame.render_widget(right, sections[1]);
+    render_right_box(frame, &sections[1], state);
 }
 
 fn render_list(frame: &mut Frame, area: &Rect, app_state: &mut App) {
@@ -36,6 +34,10 @@ fn render_list(frame: &mut Frame, area: &Rect, app_state: &mut App) {
         )
         .highlight_style(Style::new().italic())
         .highlight_symbol(">>");
+
+    if app_state.get_current_request().is_some() {
+        println!("{:?}", app_state.get_current_request());
+    }
 
     frame.render_stateful_widget(list, *area, &mut app_state.request_tree_state);
 }
@@ -61,9 +63,11 @@ pub fn handle_key(key: KeyEvent, state: &mut App) {
                 let selected_id = state.get_tree_state().selected()[0].clone();
 
                 if state.find_request(&selected_id).is_some() {
+                    println!("selecrting req");
                     state.select_request(&selected_id);
                     state.get_tree_state().select(vec![selected_id]);
                 } else if state.find_collection(&selected_id).is_some() {
+                    println!("selecting collection");
                     state.get_tree_state().toggle(vec![selected_id]);
                 }
             }
@@ -87,4 +91,24 @@ fn construct_tree(collections: &Vec<RequestCollection>) -> Vec<TreeItem<'_, Stri
     }
 
     items
+}
+
+fn render_right_box(frame: &mut Frame, area: &Rect, app_state: &mut App) {
+    let title: String = {
+        if app_state.get_tree_state().selected().len() == 0 {
+            return;
+        }
+
+        let selected_id = app_state.get_tree_state().selected()[0].clone();
+        match app_state.find_request(&selected_id) {
+            Some(req) => req.url.clone(),
+            None => "Select a Request".to_string(),
+        }
+    };
+    let container = Block::bordered()
+        .title(title)
+        .title_bottom("Test bottom")
+        .style(Style::default());
+
+    frame.render_widget(container, *area);
 }
