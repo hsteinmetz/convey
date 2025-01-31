@@ -1,13 +1,19 @@
+use std::{fs::File, io::Write};
+
 use ratatui::{
     crossterm::event::{KeyCode, KeyEvent},
     layout::{Constraint, Direction, Layout, Rect},
     style::{Style, Stylize},
-    widgets::Block,
+    widgets::{Block, Borders},
     Frame,
 };
 use tui_tree_widget::{Tree, TreeItem};
 
-use crate::app::{App, RequestCollection};
+use crate::{
+    app::{App, RequestCollection},
+    data::write_dbg,
+    ui::components::request_window,
+};
 
 use super::root_layout::create_root_layout;
 
@@ -20,7 +26,7 @@ pub fn render(frame: &mut Frame, state: &mut App) {
         .split(root_layout[1]);
 
     render_list(frame, &sections[0], state);
-    render_right_box(frame, &sections[1], state);
+    request_window::render(frame, &sections[1], state);
 }
 
 fn render_list(frame: &mut Frame, area: &Rect, app_state: &mut App) {
@@ -28,7 +34,12 @@ fn render_list(frame: &mut Frame, area: &Rect, app_state: &mut App) {
     let list = Tree::new(&items)
         .expect("all identifiers are unique")
         .block(
-            Block::bordered()
+            Block::new()
+                .borders(Borders::LEFT | Borders::RIGHT)
+                .border_style(match app_state.focused_section {
+                    crate::app::FocusedSection::Left => Style::default(),
+                    crate::app::FocusedSection::Right => Style::new().dark_gray(),
+                })
                 .title("Requests")
                 .title_bottom(" (k) up (j) down (enter) select "),
         )
@@ -56,24 +67,36 @@ pub fn handle_key(key: KeyEvent, state: &mut App) {
                 });
             }
             KeyCode::Enter => {
-                if state.get_tree_state().selected().len() == 0 {
+                let contents = String::new();
+                //contents = contents + state.request_tree_state.selected().to_owned();
+                //write_dbg();
+                let selected_id = if state.request_tree_state.selected().is_empty() {
                     return;
-                }
+                } else {
+                    state.request_tree_state.selected()[0].clone()
+                };
 
-                let selected_id = state.get_tree_state().selected()[0].clone();
+                if let Some(request) = state.find_request(&selected_id) {
+                    if let Some(collection) = state.find_collection_for_req_id(&request.id) {
+                        println!("SADLAJS");
+                        let request_id = request.id.clone();
+                        let collection_id = collection.id.clone();
 
-                if state.find_request(&selected_id).is_some() {
-                    println!("selecrting req");
-                    state.select_request(&selected_id);
-                    state.get_tree_state().select(vec![selected_id]);
+                        state.select_request(&request_id);
+                        state.request_tree_state.select(vec![request_id]);
+                        state.request_tree_state.open(vec![collection_id]);
+                    }
                 } else if state.find_collection(&selected_id).is_some() {
-                    println!("selecting collection");
-                    state.get_tree_state().toggle(vec![selected_id]);
+                    state.request_tree_state.toggle(vec![selected_id]);
                 }
             }
+            KeyCode::Char('l') => state.focused_section = crate::app::FocusedSection::Right,
             _ => {}
         },
-        crate::app::FocusedSection::Right => {}
+        crate::app::FocusedSection::Right => match key.code {
+            KeyCode::Char('h') => state.focused_section = crate::app::FocusedSection::Left,
+            _ => request_window::handle_key(key, state),
+        },
     }
 }
 
@@ -91,24 +114,4 @@ fn construct_tree(collections: &Vec<RequestCollection>) -> Vec<TreeItem<'_, Stri
     }
 
     items
-}
-
-fn render_right_box(frame: &mut Frame, area: &Rect, app_state: &mut App) {
-    let title: String = {
-        if app_state.get_tree_state().selected().len() == 0 {
-            return;
-        }
-
-        let selected_id = app_state.get_tree_state().selected()[0].clone();
-        match app_state.find_request(&selected_id) {
-            Some(req) => req.url.clone(),
-            None => "Select a Request".to_string(),
-        }
-    };
-    let container = Block::bordered()
-        .title(title)
-        .title_bottom("Test bottom")
-        .style(Style::default());
-
-    frame.render_widget(container, *area);
 }

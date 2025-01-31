@@ -6,6 +6,11 @@ use std::{
     path::Path,
 };
 
+pub fn write_dbg(data: &[u8]) {
+    let mut file = File::create("dbg.txt").unwrap();
+    file.write_all(dbg!(data));
+}
+
 pub fn write_collections(data: &HashMap<String, Vec<RequestData>>, path: &Path) -> Result<bool> {
     let result = serde_json::to_string(&data);
     match result {

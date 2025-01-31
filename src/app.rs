@@ -20,6 +20,11 @@ pub enum EditingState {
     Nothing,
 }
 
+pub struct RequestWindowState {
+    pub response_scroll_pos: u16,
+    pub response_text: String,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RequestData {
     pub id: String,
@@ -28,7 +33,7 @@ pub struct RequestData {
     pub url: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RequestCollection {
     pub id: String,
     pub name: String,
@@ -42,6 +47,10 @@ impl RequestCollection {
             name: name.to_string(),
             requests: vec![],
         }
+    }
+
+    pub fn find_req(&self, id: &str) -> Option<&RequestData> {
+        self.requests.iter().find(|req| req.id == id)
     }
 }
 
@@ -61,6 +70,7 @@ pub struct App {
     pub editing_state: EditingState,
     pub focused_section: FocusedSection,
     pub request_tree_state: TreeState<String>,
+    pub request_window_state: RequestWindowState,
 }
 
 impl App {
@@ -76,6 +86,10 @@ impl App {
             editing_state: EditingState::Nothing,
             focused_section: FocusedSection::Left,
             request_tree_state: TreeState::default(),
+            request_window_state: RequestWindowState {
+                response_scroll_pos: 0,
+                response_text: String::new(),
+            },
         };
 
         return data;
@@ -89,19 +103,19 @@ impl App {
         uuid::Uuid::new_v4().to_string()
     }
 
-    pub fn find_request(&self, id: &String) -> Option<&RequestData> {
+    pub fn find_request(&self, id: &str) -> Option<&RequestData> {
         self.request_collections
             .iter()
             .flat_map(|col| &col.requests)
-            .find(|req| req.id.eq(id))
+            .find(|req| req.id == id)
     }
 
-    pub fn find_collection(&self, id: &String) -> Option<&RequestCollection> {
-        self.request_collections.iter().find(|c| c.id.eq(id))
+    pub fn find_collection(&self, id: &str) -> Option<&RequestCollection> {
+        self.request_collections.iter().find(|c| c.id == id)
     }
 
     pub fn select_request(&mut self, id: &str) {
-        if self.find_request(&id.to_string()).is_some() {
+        if self.find_request(id).is_some() {
             self.current_request = Some(id.to_string());
         } else {
             self.current_request = None;
@@ -111,6 +125,12 @@ impl App {
     pub fn get_current_request(&self) -> Option<&RequestData> {
         self.current_request
             .as_deref()
-            .and_then(|id| self.find_request(&id.to_string()))
+            .and_then(|id| self.find_request(id))
+    }
+
+    pub fn find_collection_for_req_id(&self, id: &str) -> Option<&RequestCollection> {
+        self.request_collections
+            .iter()
+            .find(|collection| collection.find_req(id).is_some())
     }
 }
